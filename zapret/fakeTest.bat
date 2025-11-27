@@ -12,8 +12,8 @@ call service.bat check_updates
 call service.bat load_game_filter
 echo:
 
-set "BIN=%~dp0mybin\"
-set "LISTS=%~dp0mylists\"
+set "BIN=%~dp0bin\"
+set "LISTS=%~dp0lists\"
 
 cd /d %BIN%
 
