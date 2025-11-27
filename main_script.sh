@@ -101,8 +101,46 @@ find_bat_files() {
 
 # Функция для выбора стратегии
 select_strategy() {
-    cd "$REPO_DIR" || handle_error "Не удалось перейти в директорию $REPO_DIR"
+    # Инициализация путей по умолчанию
+    BIN_DIR="$BASE_DIR/zapret/mybin"
+    LISTS_DIR="$BASE_DIR/zapret/mylists"
+
+    log "Используются папки: mybin и mylists по умолчанию"
+    log "Путь к mybin: $BIN_DIR"
+    log "Путь к mylists: $LISTS_DIR"
+
+    local LOCAL_STRATEGY_DIR="$BASE_DIR/zapret"
+    local LOCAL_STRATEGY_FILE="$LOCAL_STRATEGY_DIR/fakeTest.bat"
     
+    # Относительный путь для локальной стратегии
+    local LOCAL_STRATEGY_RELATIVE_PATH="zapret/fakeTest.bat"
+    
+    local bat_files=()
+
+    # Добавляем локальную стратегию с относительным путём
+    if [ -f "$LOCAL_STRATEGY_FILE" ]; then
+        bat_files+=("$LOCAL_STRATEGY_RELATIVE_PATH")
+        log "Локальная стратегия найдена: $LOCAL_STRATEGY_FILE"
+    fi
+
+    # Поиск .bat файлов в репозитории
+    cd "$REPO_DIR" || handle_error "Не удалось перейти в директорию $REPO_DIR"
+    local IFS=$'\n'
+    local repo_bat_files=($(find_bat_files "general*.bat" | xargs -0 -n1 echo) $(find_bat_files "discord.bat" | xargs -0 -n1 echo))
+    bat_files+=("${repo_bat_files[@]}")
+
+    if [ ${#bat_files[@]} -eq 0 ]; then
+        cd ..
+        handle_error "Не найдены подходящие .bat файлы"
+    fi
+
+    # Проверка существования ключевых файлов
+    log "Проверка существования файла: $LISTS_DIR/ipset-exclude.txt"
+    if [ ! -f "$LISTS_DIR/ipset-exclude.txt" ]; then
+        handle_error "Файл $LISTS_DIR/ipset-exclude.txt не найден!"
+    fi
+
+    # Выбор стратегии
     if $NOINTERACTIVE; then
         if [ ! -f "$strategy" ]; then
             handle_error "Указанный .bat файл стратегии $strategy не найден"
@@ -111,28 +149,28 @@ select_strategy() {
         cd ..
         return
     fi
-    
-    # Обычный выбор стратегии для интерактивного режима
-    local IFS=$'\n'
-    local bat_files=($(find_bat_files "general*.bat" | xargs -0 -n1 echo) $(find_bat_files "discord.bat" | xargs -0 -n1 echo))
-    
-    if [ ${#bat_files[@]} -eq 0 ]; then
-        cd ..
-        handle_error "Не найдены подходящие .bat файлы"
-    fi
-    
+
     echo "Доступные стратегии:"
     select strategy in "${bat_files[@]}"; do
         if [ -n "$strategy" ]; then
             log "Выбрана стратегия: $strategy"
             cd ..
+            
+            # Если выбрана локальная стратегия, пути уже установлены, можно оставить лог
+            if [ "$strategy" == "$LOCAL_STRATEGY_RELATIVE_PATH" ]; then
+                log "Используются папки: mybin и mylists для локальной стратегии"
+            fi
+            
             break
         fi
         echo "Неверный выбор. Попробуйте еще раз."
     done
-    
-    parse_bat_file "$REPO_DIR/$strategy"
+
+    parse_bat_file "$strategy"
 }
+
+
+
 
 # Функция парсинга параметров из bat файла
 parse_bat_file() {
@@ -155,7 +193,7 @@ parse_bat_file() {
             local nfqws_args="${BASH_REMATCH[3]}"
             
             # Replace %LISTS% with 'lists/' in nfqws_args
-            nfqws_args="${nfqws_args//%LISTS%/lists/}"
+            nfqws_args="${nfqws_args//%LISTS%/$LISTS_DIR/}"
             
             nft_rules+=("$protocol dport {$ports} counter queue num $queue_num bypass")
             nfqws_params+=("$nfqws_args")
