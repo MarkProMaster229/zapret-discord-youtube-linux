@@ -1204,3 +1204,16 @@ telegram-cdn.org
 usercontent.dev
 tgram.org
 torg.org
+
+
+*.deviantart.com
+*.deviantart.net
+*.dafiles.com
+*.damove.com
+*.wixmp.com
+deviantart.com
+://deviantart.com
+://deviantart.com
+st.deviantart.net
+://wixmp.com
+
